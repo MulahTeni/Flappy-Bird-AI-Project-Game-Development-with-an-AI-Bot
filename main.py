@@ -68,10 +68,10 @@ def handle_input():
                 sys.exit()
     return None
 
-def update_game_state(screen, bird_rect, bird_img, upper_pipes, lower_pipes, pipe_img, background_rects, score):
+def update_game_state(screen, bird_rect, bird_img, upper_pipes, lower_pipes, pipe_img, background_rects, score, pipe_speed):
     # Kuşun çarpma kontrolü
     if bird_rect.top <= 0 or bird_rect.bottom >= SCREEN_HEIGHT:
-        return True, score  # Çarpma oldu, oyunu duraklat ve skoru döndür
+        return True, score, pipe_speed  # Çarpma oldu, oyunu duraklat ve skoru döndür
     
     # Borulara çarpma kontrolü ve skor artırma
     bird_collision_rect = pygame.Rect(bird_rect.x + 5, bird_rect.y + 5, bird_rect.width - 10, bird_rect.height - 10)
@@ -82,11 +82,13 @@ def update_game_state(screen, bird_rect, bird_img, upper_pipes, lower_pipes, pip
         lower_pipe_rect = pygame.Rect(l_pipe['x'], l_pipe['y'], pipe_img[1].get_width() - 20, pipe_img[1].get_height() - 10)
         
         if bird_collision_rect.colliderect(upper_pipe_rect) or bird_collision_rect.colliderect(lower_pipe_rect):
-            return True, score  # Borulara çarpma oldu, oyunu duraklat ve skoru döndür
+            return True, score, pipe_speed  # Borulara çarpma oldu, oyunu duraklat ve skoru döndür
         
         pipeMidPos = u_pipe['x'] + pipe_img[0].get_width() / 2
         if pipeMidPos <= playerMidPos < pipeMidPos + 4: 
             score += 1
+            if score % 2 == 0:
+                pipe_speed += 1
         
     # Arkaplanları kaydır
     for background_rect in background_rects:
@@ -94,7 +96,7 @@ def update_game_state(screen, bird_rect, bird_img, upper_pipes, lower_pipes, pip
         if background_rect.right <= 0:
             background_rect.x = SCREEN_WIDTH
             
-    return False, score  # Çarpma yok, oyun devam ediyor ve skoru döndür
+    return False, score, pipe_speed  # Çarpma yok, oyun devam ediyor ve skoru döndür
 
 
 def game_loop(screen, background_img, bird_img, bird_rect, background_rects, pipe_img, upper_pipes, lower_pipes):
@@ -116,10 +118,10 @@ def game_loop(screen, background_img, bird_img, bird_rect, background_rects, pip
             bird_velocity_y = bird_flap_velocity  # Kuşu zıplat
         elif action == "restart":
             main()
-            
+
         if not paused:
             # Oyun durumu güncelle ve skoru al
-            collision, score = update_game_state(screen, bird_rect, bird_img, upper_pipes, lower_pipes, pipe_img, background_rects, score)
+            collision, score, pipe_speed = update_game_state(screen, bird_rect, bird_img, upper_pipes, lower_pipes, pipe_img, background_rects, score, pipe_speed)
             if collision:
                 paused = True  # Oyunu duraklat
                 # Kuşun çarptığı yerde kalmasını sağla
