@@ -9,15 +9,16 @@ SCREEN_HEIGHT = 500
 PIPE_HEIGHT = 400
 
 
-# Arkaplanın hızı
+# Oyun ici hızlar
 BACKGROUND_SPEED = 1
+PIPE_START_SPEED = 3
+PIPE_MAX_SPEED = 9
+framepersecond = 32
 
 # Yer çekimi ivmesi
 GRAVITY = 2
 MAX_FALL_SPEED = 20
 
-# Oyun kare hızı
-framepersecond = 32
 
 def calculate_upper_pipe_y_and_gap_size():
     return random.randint(-200, -20), random.randint(20, 40)
@@ -34,6 +35,22 @@ def draw_pipes(screen, pipe_img, upper_pipes, lower_pipes):
         screen.blit(pipe_img[0], (upper_pipe['x'], upper_pipe['y']))
         screen.blit(pipe_img[1], (lower_pipe['x'], lower_pipe['y']))
     
+def check_add_pipe(upper_pipes, lower_pipes):
+    # En sağdaki borunun x konumunu bul
+    rightmost_x = max(upper_pipe['x'] for upper_pipe in upper_pipes)
+    if rightmost_x <= SCREEN_WIDTH * 3 / 4:  # Eğer en sağdaki boru ekranın dörtte birine ulaştıysa
+        # Yeni bir boru ekle
+        pipe_y, gap_size = calculate_upper_pipe_y_and_gap_size()
+        upper_pipes.append({'x': SCREEN_WIDTH, 'y': pipe_y})
+        lower_pipes.append({'x': SCREEN_WIDTH, 'y': pipe_y + gap_size + PIPE_HEIGHT})
+
+def check_remove_pipe(upper_pipes, lower_pipes, pipe_img):
+    # Sol ekrandan çıkan boruları listeden sil
+    for u_pipe, l_pipe in zip(upper_pipes, lower_pipes):
+        if u_pipe['x'] + pipe_img[0].get_width() < 0:
+            upper_pipes.remove(u_pipe)
+            lower_pipes.remove(l_pipe)
+   
 def handle_input():
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -78,6 +95,7 @@ def game_loop(screen, background_img, bird_img, bird_rect, background_rects, pip
     # Oyuncu hızları
     bird_velocity_y = 0  # Kuşun başlangıç düşme hızı
     bird_flap_velocity = -15  # Kuşun zıplama hızı
+    pipe_speed = PIPE_START_SPEED
     
     while True:
         # Kullanıcı girişlerini işle
@@ -111,8 +129,14 @@ def game_loop(screen, background_img, bird_img, bird_rect, background_rects, pip
 
             # Boruları kaydır
             for u_pipe, l_pipe in zip(upper_pipes, lower_pipes):
-                u_pipe['x'] -= BACKGROUND_SPEED
-                l_pipe['x'] -= BACKGROUND_SPEED
+                u_pipe['x'] -= pipe_speed
+                l_pipe['x'] -= pipe_speed
+
+            # Yeni boru ekleme kontrolü
+            check_add_pipe(upper_pipes, lower_pipes)
+            
+            # Boru silme kontrolü
+            check_remove_pipe(upper_pipes, lower_pipes, pipe_img)
 
             # Ekranı temizle
             screen.fill((0, 0, 0))
