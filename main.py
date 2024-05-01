@@ -21,7 +21,7 @@ MAX_FALL_SPEED = 20
 
 
 def calculate_upper_pipe_y_and_gap_size():
-    return random.randint(-200, -20), random.randint(20, 40)
+    return random.randint(-200, -20), random.randint(25, 45)
 
 def draw_background(screen, background_img, background_rects):
     for background_rect in background_rects:
@@ -61,36 +61,46 @@ def handle_input():
                 return "toggle_pause"  # Oyun durumu değiştir
             elif event.key == pygame.K_SPACE or event.key == pygame.K_UP:
                 return "flap"  # Kuşu zıplat
+            elif event.key == pygame.K_r:  # "r" tuşuna basıldığında oyunu yeniden başlat
+                return "restart"
             elif event.key == pygame.K_q:  # "q" tuşuna basıldığında oyunu kapat
                 pygame.quit()
                 sys.exit()
     return None
 
-def update_game_state(screen, bird_rect, upper_pipes, lower_pipes, pipe_img, background_rects):
+def update_game_state(screen, bird_rect, bird_img, upper_pipes, lower_pipes, pipe_img, background_rects, score):
     # Kuşun çarpma kontrolü
     if bird_rect.top <= 0 or bird_rect.bottom >= SCREEN_HEIGHT:
-        return True  # Çarpma oldu, oyunu duraklat
+        return True, score  # Çarpma oldu, oyunu duraklat ve skoru döndür
     
-    # Borulara çarpma kontrolü
+    # Borulara çarpma kontrolü ve skor artırma
     bird_collision_rect = pygame.Rect(bird_rect.x + 5, bird_rect.y + 5, bird_rect.width - 10, bird_rect.height - 10)
+    playerMidPos = SCREEN_WIDTH // 5 + bird_img.get_width()/2
+    
     for u_pipe, l_pipe in zip(upper_pipes, lower_pipes):
         upper_pipe_rect = pygame.Rect(u_pipe['x'], u_pipe['y'], pipe_img[0].get_width() - 20, pipe_img[0].get_height() - 10)
         lower_pipe_rect = pygame.Rect(l_pipe['x'], l_pipe['y'], pipe_img[1].get_width() - 20, pipe_img[1].get_height() - 10)
         
         if bird_collision_rect.colliderect(upper_pipe_rect) or bird_collision_rect.colliderect(lower_pipe_rect):
-            return True  # Borulara çarpma oldu, oyunu duraklat
-
+            return True, score  # Borulara çarpma oldu, oyunu duraklat ve skoru döndür
+        
+        pipeMidPos = u_pipe['x'] + pipe_img[0].get_width() / 2
+        if pipeMidPos <= playerMidPos < pipeMidPos + 4: 
+            score += 1
+        
     # Arkaplanları kaydır
     for background_rect in background_rects:
         background_rect.x -= BACKGROUND_SPEED
         if background_rect.right <= 0:
             background_rect.x = SCREEN_WIDTH
-    
-    return False  # Çarpma yok, oyun devam ediyor
+            
+    return False, score  # Çarpma yok, oyun devam ediyor ve skoru döndür
+
 
 def game_loop(screen, background_img, bird_img, bird_rect, background_rects, pipe_img, upper_pipes, lower_pipes):
     paused = False
     framepersecond_clock = pygame.time.Clock()
+    score = 0
     
     # Oyuncu hızları
     bird_velocity_y = 0  # Kuşun başlangıç düşme hızı
@@ -104,10 +114,12 @@ def game_loop(screen, background_img, bird_img, bird_rect, background_rects, pip
             paused = not paused
         elif action == "flap":
             bird_velocity_y = bird_flap_velocity  # Kuşu zıplat
-
+        elif action == "restart":
+            main()
+            
         if not paused:
-            # Oyun durumu güncelle
-            collision = update_game_state(screen, bird_rect, upper_pipes, lower_pipes, pipe_img, background_rects)
+            # Oyun durumu güncelle ve skoru al
+            collision, score = update_game_state(screen, bird_rect, bird_img, upper_pipes, lower_pipes, pipe_img, background_rects, score)
             if collision:
                 paused = True  # Oyunu duraklat
                 # Kuşun çarptığı yerde kalmasını sağla
@@ -150,11 +162,17 @@ def game_loop(screen, background_img, bird_img, bird_rect, background_rects, pip
             # Kuşu ekrana çiz
             draw_bird(screen, bird_img, bird_rect)
 
+            # Skoru ekrana yazdır
+            font = pygame.font.Font(None, 36)
+            text = font.render("Score: " + str(score), True, (255, 255, 255))
+            screen.blit(text, (10, 10))
+
             # Ekranı güncelle
             pygame.display.update()
 
         # FPS sınırlaması
         framepersecond_clock.tick(framepersecond)
+
 
 def main():
     pygame.init()
